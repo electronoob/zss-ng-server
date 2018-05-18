@@ -18,11 +18,6 @@
     <label>username</label>
     <input type="text" id="username" name="username" value="electronoob">
     <script>
-        function ab2str(buf) {
-            //var buf1 = new ArrayBuffer(buf.byteLength-1);
-            var buf2 = buf.slice(1);
-            return String.fromCharCode.apply(null, new Uint16Array(buf2));
-        }
         function str2ab(opcode, str) {
             str = str.slice(0, 16);
             let ab = new ArrayBuffer((str.length*2)+1);
@@ -71,48 +66,48 @@
         socket.addEventListener('message', function (event) {
             if (typeof event.data === 'string') {
             } else {
-                let ab = new Uint8Array(event.data).buffer;
-                let dv = new DataView(ab);
-                let op = dv.getUint8(0);
-                switch(op){
+                let abMessage = new Uint8Array(event.data).buffer;
+                let dvMessage = new DataView(abMessage);
+                let opMessage = dvMessage.getUint8(0);
+                switch(opMessage){
                     case 0:{
                         // recv, store and retransmit hash
-                        hash.a = dv.getUint32(1);
-                        hash.b = dv.getUint32(1+4)
-                        let ab0 = new ArrayBuffer(9);
-                        let dv0 = new DataView(ab0);
-                        dv0.setUint8(0, 0);
-                        dv0.setUint32(1,hash.a);
-                        dv0.setUint32(1+4,hash.b);
-                        socket.send(ab0);
+                        hash.a = dvMessage.getUint32(1);
+                        hash.b = dvMessage.getUint32(1+4)
+                        let ab = new ArrayBuffer(9);
+                        let dv = new DataView(ab);
+                        dv.setUint8(0, 0);
+                        dv.setUint32(1,hash.a);
+                        dv.setUint32(1+4,hash.b);
+                        socket.send(ab);
                         break;
                     }
                     case 1:{
                         // mouse x,y according to server
-                        r.x = dv.getUint16(1);
-                        r.y = dv.getUint16(3);
+                        r.x = dvMessage.getUint16(1);
+                        r.y = dvMessage.getUint16(3);
                         break;
                     }
                     case 2:{
-                        // ping
-                        let ts2 = dv.getFloat64(1);
-                        let ab2 = new ArrayBuffer(9);
-                        let dv2 = new DataView(ab2);
-                        dv2.setUint8(0, 2);
-                        dv2.setFloat64(1, ts2);
-                        socket.send(ab2)//pong
+                        // ping timestamp
+                        let ts = dvMessage.getFloat64(1);
+                        let ab = new ArrayBuffer(9);
+                        let dv = new DataView(ab);
+                        dv.setUint8(0, 2);
+                        dv.setFloat64(1, ts);
+                        socket.send(ab)//pong
                         break;
                     }
                     case 3:{
                         // lag in ms reply
-                        let ts3 = dv.getFloat64(1);
-                        lag = ts3;
+                        let ts = dvMessage.getFloat64(1);
+                        lag = ts;
                         break;
                     }
                     case 4:{
                         let username = document.getElementById("username").value;
-                        let ab4 = str2ab(3, username);
-                        socket.send(ab4);
+                        let ab = str2ab(3, username);
+                        socket.send(ab);
                         break;
                     }
                     case 5: {

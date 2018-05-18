@@ -45,51 +45,50 @@ wss.on('connection', function connection(ws) {
     if (typeof message === 'string') {
         console.log("data IS a string!");
     } else {
-        let ab = new Uint8Array(message).buffer;
-        let dv = new DataView(ab);
-        let op = dv.getUint8(0);
-        switch(op){
+        let abMessage = new Uint8Array(message).buffer;
+        let dvMessage = new DataView(abMessage);
+        let opMessage = dvMessage.getUint8(0);
+        switch(opMessage){
             case 0: {
-                //
                 let hash = {a:null, b:null};
-                hash.a = dv.getUint32(1);
-                hash.b = dv.getUint32(1+4)
+                hash.a = dvMessage.getUint32(1);
+                hash.b = dvMessage.getUint32(1+4)
                 if (hash.a + "" + hash.b == ws.zss.player.identification.hash) {
-                    let ab0 = new ArrayBuffer(1);
-                    let dv0 = new DataView(ab0);
-                    dv0.setUint8(0, 4);//request userrname
-                    this.send(ab0, function ack(error) {});
+                    let ab = new ArrayBuffer(1);
+                    let dv = new DataView(ab);
+                    dv.setUint8(0, 4);//request userrname
+                    this.send(ab, function ack(error) {});
                 } else {
-                    let ab0 = new ArrayBuffer(1);
-                    let dv0 = new DataView(ab0);
-                    dv0.setUint8(0, 254);//disconnect
-                    this.send(ab0, function ack(error) {});
+                    let ab = new ArrayBuffer(1);
+                    let dv = new DataView(ab);
+                    dv.setUint8(0, 254);//disconnect
+                    this.send(ab, function ack(error) {});
                 }
                 break;
             }
             case 1:{
-                this.zss.player.mouse.x = dv.getUint16(1);
-                this.zss.player.mouse.y = dv.getUint16(3);
+                this.zss.player.mouse.x = dvMessage.getUint16(1);
+                this.zss.player.mouse.y = dvMessage.getUint16(3);
                 break;
             }
             case 2: {
-                let ts2 = dv.getFloat64(1);
-                let lag2 = Date.now() - ts2;
-                let ab2 = new ArrayBuffer(9);
-                let dv2 = new DataView(ab2);
-                dv2.setUint8(0, 3);
-                dv2.setFloat64(1, lag2);
-                this.send(ab2, function ack(error) {});
+                let ts = dvMessage.getFloat64(1);
+                let lag = Date.now() - ts;
+                let ab = new ArrayBuffer(9);
+                let dv = new DataView(ab);
+                dv.setUint8(0, 3);
+                dv.setFloat64(1, lag);
+                this.send(ab, function ack(error) {});
                 break;
             }
             case 3:{
-                let username3 = new StringDecoder().write(new Uint8Array(ab.slice(1)));
-                this.zss.player.identification.username = username3;
+                let username = new StringDecoder().write(new Uint8Array(abMessage.slice(1)));
+                this.zss.player.identification.username = username;
                 // requestmouse xy updates
-                let ab3 = new ArrayBuffer(1);
-                let dv3 = new DataView(ab3);
-                dv3.setUint8(0, 5);
-                this.send(ab3, function ack(error) {});
+                let ab = new ArrayBuffer(1);
+                let dv = new DataView(ab);
+                dv.setUint8(0, 5);
+                this.send(ab, function ack(error) {});
                 break;
             }
         }
