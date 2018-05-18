@@ -10,12 +10,11 @@
                 background-color: #000;
             }
         </style>
-
-
 <script>
 let m = {x: 0, y: 0};
 let r = {x:0,y:0};
-let t1 = null;
+let t1 = null; //timer1
+let lag = null;
 
 const socket = new WebSocket('ws://localhost:8080');
 socket.binaryType = "arraybuffer";
@@ -27,11 +26,17 @@ socket.addEventListener('open', function (event) {
         dv.setUint16(1, m.x);
         dv.setUint16(3, m.y);
         socket.send(b);
-    },5);
-    t1 = setInterval(() => {
-        ctx.fillRect(r.x,r.y,2,2);
-    },10);
+    },1000/30);
+    /*
+    t1 = setInterval(() => { },500);
+    */
 });
+function draw() {
+    ctx.fillRect(r.x,r.y,2,2);
+    ctx.clearRect(0,0,400,30);
+    ctx.fillText("lag " + lag + "ms", 10,10);
+    window.requestAnimationFrame(draw);
+}
 socket.addEventListener('message', function (event) {
     if (typeof event.data === 'string') {
     } else {
@@ -39,10 +44,28 @@ socket.addEventListener('message', function (event) {
         let dv = new DataView(ab);
         let op = dv.getUint8(0);
         switch(op){
-            case 1:
+            case 1:{
+                // mouse x,y according to server
                 r.x = dv.getUint16(1);
                 r.y = dv.getUint16(3);
                 break;
+            }
+            case 2:{
+                // ping
+                let ts = dv.getFloat64(1);
+                let ts_ab = new ArrayBuffer(9);
+                let ts_dv = new DataView(ts_ab);
+                ts_dv.setUint8(0, 2);
+                ts_dv.setFloat64(1, ts);
+                socket.send(ts_ab)//pong
+                break;
+            }
+            case 3:{
+                // lag in ms reply
+                let ts = dv.getFloat64(1);
+                lag = ts;
+                break;
+            }
         }
     }
 });
@@ -57,6 +80,7 @@ socket.addEventListener('message', function (event) {
         m.x = e.clientX
         m.y = e.clientY;
     });
+    draw();
 </script>
 </body>
 </html>
