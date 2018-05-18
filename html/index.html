@@ -8,79 +8,104 @@
                 margin: 0px;
                 padding: 0px;
                 background-color: #000;
+                color: #fff;
             }
         </style>
-<script>
-let m = {x: 0, y: 0};
-let r = {x:0,y:0};
-let t1 = null; //timer1
-let lag = null;
-
-const socket = new WebSocket('ws://localhost:8080');
-socket.binaryType = "arraybuffer";
-socket.addEventListener('open', function (event) {
-    setInterval(function(){
-        let b = new ArrayBuffer(5);
-        let dv = new DataView(b);
-        dv.setUint8(0, 1);
-        dv.setUint16(1, m.x);
-        dv.setUint16(3, m.y);
-        socket.send(b);
-    },1000/30);
-    /*
-    t1 = setInterval(() => { },500);
-    */
-});
-function draw() {
-    ctx.fillRect(r.x,r.y,2,2);
-    ctx.clearRect(0,0,400,30);
-    ctx.fillText("lag " + lag + "ms", 10,10);
-    window.requestAnimationFrame(draw);
-}
-socket.addEventListener('message', function (event) {
-    if (typeof event.data === 'string') {
-    } else {
-        let ab = new Uint8Array(event.data).buffer;
-        let dv = new DataView(ab);
-        let op = dv.getUint8(0);
-        switch(op){
-            case 1:{
-                // mouse x,y according to server
-                r.x = dv.getUint16(1);
-                r.y = dv.getUint16(3);
-                break;
-            }
-            case 2:{
-                // ping
-                let ts = dv.getFloat64(1);
-                let ts_ab = new ArrayBuffer(9);
-                let ts_dv = new DataView(ts_ab);
-                ts_dv.setUint8(0, 2);
-                ts_dv.setFloat64(1, ts);
-                socket.send(ts_ab)//pong
-                break;
-            }
-            case 3:{
-                // lag in ms reply
-                let ts = dv.getFloat64(1);
-                lag = ts;
-                break;
-            }
-        }
-    }
-});
-</script>
    </head>
    <body>
-<canvas id=c width=400px height=400px></canvas>
-<script>
-    let c = document.getElementById("c");
-    let ctx = c.getContext("2d");
-    c.addEventListener('mousemove', function(e) {
-        m.x = e.clientX
-        m.y = e.clientY;
-    });
-    draw();
-</script>
+    <canvas id=c width=400px height=400px></canvas>
+    <br/>
+    <label>username</label>
+    <input type="text" id="username" name="username" value="electronoob">
+    <script>
+        let c = document.getElementById("c");
+        let ctx = c.getContext("2d");
+        c.addEventListener('mousemove', function(e) {
+            m.x = e.clientX
+            m.y = e.clientY;
+        });
+        let m = {x: 0, y: 0};
+        let r = {x:0,y:0};
+        let t1 = null; //timer1
+        let lag = null;
+        let hash = {a: null, b:null};
+        let sendMouse = false;
+        const socket = new WebSocket('ws://localhost:8080');
+        socket.binaryType = "arraybuffer";
+        socket.addEventListener('open', function (event) {
+            setInterval(function(){
+                if(!sendMouse) return;
+                let b = new ArrayBuffer(5);
+                let dv = new DataView(b);
+                dv.setUint8(0, 1);
+                dv.setUint16(1, m.x);
+                dv.setUint16(3, m.y);
+                socket.send(b);
+            },1000/30);
+            /*
+            t1 = setInterval(() => { },500);
+            */
+        });
+        function draw() {
+            ctx.fillRect(r.x,r.y,2,2);
+            ctx.clearRect(0,0,400,30);
+            ctx.fillText("lag " + lag + "ms", 10,10);
+            ctx.fillText("hash " + hash.a + "" + hash.b, 100,10);
+            window.requestAnimationFrame(draw);
+        }
+        socket.addEventListener('message', function (event) {
+            if (typeof event.data === 'string') {
+            } else {
+                let ab = new Uint8Array(event.data).buffer;
+                let dv = new DataView(ab);
+                let op = dv.getUint8(0);
+                switch(op){
+                    case 0:{
+                        hash.a = dv.getUint32(1);
+                        hash.b = dv.getUint32(1+4)
+                        let ab0 = new ArrayBuffer(9);
+                        let dv0 = new DataView(ab0);
+                        dv0.setUint8(0, 0);
+                        dv0.setUint32(1,hash.a);
+                        dv0.setUint32(1+4,hash.b);
+                        socket.send(ab0);
+                        break;
+                    }
+                    case 1:{
+                        // mouse x,y according to server
+                        r.x = dv.getUint16(1);
+                        r.y = dv.getUint16(3);
+                        break;
+                    }
+                    case 2:{
+                        // ping
+                        let ts2 = dv.getFloat64(1);
+                        let ab2 = new ArrayBuffer(9);
+                        let dv2 = new DataView(ab2);
+                        dv2.setUint8(0, 2);
+                        dv2.setFloat64(1, ts2);
+                        socket.send(ab2)//pong
+                        break;
+                    }
+                    case 3:{
+                        // lag in ms reply
+                        let ts3 = dv.getFloat64(1);
+                        lag = ts3;
+                        break;
+                    }
+                    case 4:{
+                        let username = document.getElementById("username").value;
+                        console.log(username);
+                        //send as 3 opcode
+                        break;
+                    }
+                    case 254:{
+                        console.log("disconnect message recv");
+                    }
+                }
+            }
+        });
+        draw();
+    </script>
 </body>
 </html>

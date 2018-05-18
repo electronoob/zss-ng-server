@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const crypto = require('crypto');
 const wss = new WebSocket.Server({ port: 8080 });
 var express = require('express');
 var app = express();
@@ -14,9 +15,7 @@ setInterval(function(){
             var dv = new DataView(ab);
             dv.setUint8(0, 2);
             dv.setFloat64(1, Date.now());
-            client.send(ab, function ack(error) {
-                //if(error)console.log(error);
-            });
+            client.send(ab, function ack(error) {});
         }
     });
 }.bind(wss), 1000)
@@ -25,7 +24,8 @@ wss.on('connection', function connection(ws) {
   ws.zss = {
     player: {
       mouse: {x: null, y: null},
-      identification: {name: null, hash: null,realm:null},
+      identification: {name: null,realm:null, hash:null},
+      state:{},
     }
   };
   ws.zss.timers = [];
@@ -36,9 +36,7 @@ wss.on('connection', function connection(ws) {
         dv.setUint8(0, 1);
         dv.setUint16(1, this.zss.player.mouse.x);
         dv.setUint16(3, this.zss.player.mouse.y);
-        ws.send(ab, function ack(error) {
-            //if(error)console.log(error);
-        });
+        ws.send(ab, function ack(error) {});
       }.bind(ws), 5)
   );
 
@@ -50,19 +48,41 @@ wss.on('connection', function connection(ws) {
         let dv = new DataView(ab);
         let op = dv.getUint8(0);
         switch(op){
+            case 0: {
+                //
+                let hash = {a:null, b:null};
+                hash.a = dv.getUint32(1);
+                hash.b = dv.getUint32(1+4)
+                if (hash.a + "" + hash.b == ws.zss.player.identification.hash) {
+                    let ab0 = new ArrayBuffer(1);
+                    let dv0 = new DataView(ab0);
+                    dv0.setUint8(0, 4);//request userrname
+                    this.send(ab0, function ack(error) {});
+                } else {
+                    let ab0 = new ArrayBuffer(1);
+                    let dv0 = new DataView(ab0);
+                    dv0.setUint8(0, 254);//disconnect
+                    this.send(ab0, function ack(error) {});
+                }
+                break;
+            }
             case 1:{
                 this.zss.player.mouse.x = dv.getUint16(1);
                 this.zss.player.mouse.y = dv.getUint16(3);
                 break;
             }
             case 2: {
-                let ts = dv.getFloat64(1);
-                let lag = Date.now() - ts;
-                let ts_ab = new ArrayBuffer(9);
-                let ts_dv = new DataView(ts_ab);
-                ts_dv.setUint8(0, 3);
-                ts_dv.setFloat64(1, lag);
-                this.send(ts_ab, function ack(error) {});
+                let ts2 = dv.getFloat64(1);
+                let lag2 = Date.now() - ts2;
+                let ab2 = new ArrayBuffer(9);
+                let dv2 = new DataView(ab2);
+                dv2.setUint8(0, 3);
+                dv2.setFloat64(1, lag2);
+                this.send(ab2, function ack(error) {});
+                break;
+            }
+            case 3:{
+
                 break;
             }
         }
@@ -73,10 +93,14 @@ wss.on('connection', function connection(ws) {
         clearInterval(element)
     });
   });
-  ws.send('something', function ack(error) {
-    if(error)console.log(error);
-  });
+    let ca = crypto.randomBytes(4).readUInt32BE(0, true);
+    let cb = crypto.randomBytes(4).readUInt32BE(0, true);
+    let ab = new ArrayBuffer(9);
+    let dv = new DataView(ab);
+    dv.setUint8(0, 0);
+    dv.setUint32(1,ca);
+    dv.setUint32(1+4,cb);
+    ws.send(ab, function ack(error) {});
+    ws.zss.player.identification.hash = ca +""+ cb;
+    console.log("sending hash",ws.zss.player.identification.hash);
 });
-
-
-//var millis = Date.now() - start;
