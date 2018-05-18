@@ -21,8 +21,10 @@ wss.on('connection', function connection(ws) {
         dv.setUint8(0, 1);
         dv.setUint16(1, this.zss.player.mouse.x);
         dv.setUint16(3, this.zss.player.mouse.y);
-        socket.send(b);
-      }, 10).bind(this)
+        ws.send(b, function ack(error) {
+            //if(error)console.log(error);
+        });
+      }.bind(ws), 5)
   );
   ws.on('message', function incoming(message) {
     if (typeof message === 'string') {
@@ -33,12 +35,18 @@ wss.on('connection', function connection(ws) {
         let op = dv.getUint8(0);
         switch(op){
             case 1:
-                console.log("mouse ", dv.getUint16(1), dv.getUint16(3));
                 this.zss.player.mouse.x = dv.getUint16(1);
-                this.zss.player.mouse.x = dv.getUint16(3);
+                this.zss.player.mouse.y = dv.getUint16(3);
                 break;
         }
     }
   });
-  ws.send('something');
+  ws.on('close', function close() {
+    this.zss.timers.forEach(element => {
+        clearInterval(element)
+    });
+  });
+  ws.send('something', function ack(error) {
+    if(error)console.log(error);
+  });
 });

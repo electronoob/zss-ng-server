@@ -14,6 +14,9 @@
 
 <script>
 let m = {x: 0, y: 0};
+let r = {x:0,y:0};
+let t1 = null;
+
 const socket = new WebSocket('ws://localhost:8080');
 socket.binaryType = "arraybuffer";
 socket.addEventListener('open', function (event) {
@@ -24,15 +27,23 @@ socket.addEventListener('open', function (event) {
         dv.setUint16(1, m.x);
         dv.setUint16(3, m.y);
         socket.send(b);
-    },200);
+    },5);
+    t1 = setInterval(() => {
+        ctx.fillRect(r.x,r.y,2,2);
+    },10);
 });
 socket.addEventListener('message', function (event) {
-    let ab = new Uint8Array(event.data).buffer;
-    let dv = new DataView(ab);
     if (typeof event.data === 'string') {
-        console.log("data IS a string!");
     } else {
-        console.log("data isnt a string?");
+        let ab = new Uint8Array(event.data).buffer;
+        let dv = new DataView(ab);
+        let op = dv.getUint8(0);
+        switch(op){
+            case 1:
+                r.x = dv.getUint16(1);
+                r.y = dv.getUint16(3);
+                break;
+        }
     }
 });
 </script>
