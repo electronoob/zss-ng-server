@@ -18,6 +18,21 @@
     <label>username</label>
     <input type="text" id="username" name="username" value="electronoob">
     <script>
+        function ab2str(buf) {
+            //var buf1 = new ArrayBuffer(buf.byteLength-1);
+            var buf2 = buf.slice(1);
+            return String.fromCharCode.apply(null, new Uint16Array(buf2));
+        }
+        function str2ab(opcode, str) {
+            str = str.slice(0, 16);
+            let ab = new ArrayBuffer((str.length*2)+1);
+            let dv = new DataView(ab);
+            dv.setUint8(0, opcode);
+            for (var i=1, strLen=str.length; i <= strLen; i++) {
+                dv.setUint16((i*2)-1, str.charCodeAt(i-1));
+            }
+            return ab;
+        }
         let c = document.getElementById("c");
         let ctx = c.getContext("2d");
         c.addEventListener('mousemove', function(e) {
@@ -61,6 +76,7 @@
                 let op = dv.getUint8(0);
                 switch(op){
                     case 0:{
+                        // recv, store and retransmit hash
                         hash.a = dv.getUint32(1);
                         hash.b = dv.getUint32(1+4)
                         let ab0 = new ArrayBuffer(9);
@@ -95,12 +111,17 @@
                     }
                     case 4:{
                         let username = document.getElementById("username").value;
-                        console.log(username);
-                        //send as 3 opcode
+                        let ab4 = str2ab(3, username);
+                        socket.send(ab4);
+                        break;
+                    }
+                    case 5: {
+                        sendMouse = true;
                         break;
                     }
                     case 254:{
                         console.log("disconnect message recv");
+                        sendMouse = false;
                     }
                 }
             }

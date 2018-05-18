@@ -6,6 +6,7 @@ var app = express();
 app.set('port', 1080);
 app.use(express.static('html'))
 app.listen(app.get('port'));
+const { StringDecoder } = require('string_decoder');
 
 setInterval(function(){
     this.clients.forEach(function each(client) {
@@ -82,7 +83,13 @@ wss.on('connection', function connection(ws) {
                 break;
             }
             case 3:{
-
+                let username3 = new StringDecoder().write(new Uint8Array(ab.slice(1)));
+                this.zss.player.identification.username = username3;
+                // requestmouse xy updates
+                let ab3 = new ArrayBuffer(1);
+                let dv3 = new DataView(ab3);
+                dv3.setUint8(0, 5);
+                this.send(ab3, function ack(error) {});
                 break;
             }
         }
@@ -102,5 +109,4 @@ wss.on('connection', function connection(ws) {
     dv.setUint32(1+4,cb);
     ws.send(ab, function ack(error) {});
     ws.zss.player.identification.hash = ca +""+ cb;
-    console.log("sending hash",ws.zss.player.identification.hash);
 });
